@@ -44,7 +44,7 @@ export const ServiceDefinition = z.object({
   id: z.string().min(1).max(64).regex(/^[a-z0-9_-]+$/),
   name: z.string().min(1).max(128),
   description: z.string().max(2048).optional().default(""),
-  /** deprecated — kept for wire compat, no longer shown in the UI */
+  /** Lucide icon name (e.g. "Server") — subtle glyph in lists, never emoji */
   icon: z.string().max(64).optional(),
   // For type=shell: shell command. For systemd: ignored, uses systemdUnit. For docker: image or compose.
   command: z.string().min(1).max(4096),

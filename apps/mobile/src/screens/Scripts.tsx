@@ -4,6 +4,7 @@ import { ChevronRight, Plus } from "lucide-react-native";
 import { theme } from "../theme";
 import type { RpcClient } from "../lib/client";
 import { Card } from "../components/Card";
+import { ItemIcon } from "../components/IconPicker";
 import { ScriptCreateSheet } from "../features/scripts/ScriptCreateSheet";
 import { ScriptRunSheet, type RunnableScript } from "../features/scripts/ScriptRunSheet";
 import type { ScriptParam } from "../features/scripts/params";
@@ -14,6 +15,7 @@ interface ScriptDef {
   name: string;
   command: string;
   description?: string;
+  icon?: string | null;
   cwd?: string;
   runMode?: string;
   params?: ScriptParam[];
@@ -71,6 +73,11 @@ export function ScriptsScreen({ client }: { client: RpcClient | null }) {
         {scripts.map((s) => (
           <Card key={s.id} onPress={() => setRunning({ id: s.id, name: s.name, description: s.description, command: s.command, params: s.params })}>
             <View style={styles.row}>
+              {s.icon ? (
+                <View style={styles.iconWrap}>
+                  <ItemIcon name={s.icon} size={17} />
+                </View>
+              ) : null}
               <View style={{ flex: 1 }}>
                 <Text style={styles.name}>{s.name}</Text>
                 <Text style={styles.cmd} numberOfLines={2}>
@@ -98,6 +105,7 @@ const styles = StyleSheet.create({
   title: { color: theme.colors.foreground, fontSize: 26, fontFamily: theme.font.bold },
   add: { backgroundColor: theme.colors.cardAlt, borderRadius: 999, padding: 9 },
   row: { flexDirection: "row", alignItems: "center", gap: 12 },
+  iconWrap: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.cardAlt },
   name: { color: theme.colors.foreground, fontSize: 16, fontFamily: theme.font.bold },
   cmd: { color: theme.colors.secondary, fontSize: 13, fontFamily: theme.font.regular, marginTop: 4 },
   inputs: { color: theme.colors.muted, fontSize: 12, fontFamily: theme.font.medium, marginTop: 4 },

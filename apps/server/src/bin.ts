@@ -46,9 +46,11 @@ Data dir: ~/.home-server/userdata  (or $HOME_SERVER_HOME)
 
 function parseArgs(argv: string[]): { cmd: string; opts: Record<string, string | boolean> } {
   const opts: Record<string, string | boolean> = {};
-  let cmd = argv[2] ?? "start";
-  if (cmd.startsWith("-")) cmd = "start";
-  for (let i = 3; i < argv.length; i++) {
+  let cmd = "start";
+  let cmdSet = false;
+  // flags may come before or after the subcommand (`home-server --tailscale start`
+  // must work the same as `home-server start --tailscale`); first non-flag token wins.
+  for (let i = 2; i < argv.length; i++) {
     const a = argv[i]!;
     if (a === "--tailscale") opts.tailscale = true;
     else if (a === "--help" || a === "-h") opts.help = true;
@@ -56,6 +58,9 @@ function parseArgs(argv: string[]): { cmd: string; opts: Record<string, string |
       const k = a.slice(2);
       const v = argv[i + 1] && !argv[i + 1]!.startsWith("--") ? argv[++i]! : "true";
       opts[k] = v;
+    } else if (!cmdSet) {
+      cmd = a;
+      cmdSet = true;
     }
   }
   if (argv.includes("--help") || argv.includes("-h")) opts.help = true;
@@ -98,8 +103,9 @@ async function main(): Promise<void> {
           const port = cfg.tailscaleServePort !== 443 ? `:${cfg.tailscaleServePort}` : "";
           connectionString = `https://${st.tailnetIpv4Addresses[0]}${port}`;
         }
-      } catch {
+      } catch (e) {
         // fallback to local connection string if tailscale not available
+        console.warn(`[tailscale] could not read tailnet status, using local URL: ${(e as Error).message}`);
       }
     }
     const url = buildPairingUrl(connectionString, pairing);
@@ -125,7 +131,7 @@ async function main(): Promise<void> {
     port: opts.port ? Number(opts.port) : opts["port"] ? Number(opts["port"]) : undefined,
     host: opts.host ? String(opts.host) : opts["host"] ? String(opts["host"]) : undefined,
     baseDir: opts["base-dir"] ? String(opts["base-dir"]) : undefined,
-    tailscaleServeEnabled: Boolean(opts.tailscale),
+    tailscaleServeEnabled: Boolean(opts.tailscale) || process.env.HOME_SERVER_TAILSCALE === "1",
   });
 
   const token = ensureToken(config.tokenPath);
@@ -220,8 +226,16 @@ async function main(): Promise<void> {
               connectionString = tailscalePublicUrl;
               pairingUrl = buildPairingUrl(connectionString, pairing);
               logger.info("Tailscale Serve configured (via tailnet IP)", { localPort: actualPort, servePort: config.tailscaleServePort });
+            } else {
+              logger.warn("Tailscale Serve is up but no MagicDNS name or tailnet IP found — using local URL");
             }
-          } catch {}
+          } catch (e) {
+            logger.warn("Tailscale Serve is up but tailnet status could not be read — using local URL", {
+              error: (e as Error).message,
+            });
+          }
+        } else {
+          logger.warn("Tailscale Serve could not be configured — using local URL (is tailscaled running? see `tailscale status`)");
         }
       }
 

@@ -9,7 +9,9 @@
     "./path": { "types": "./src/path.ts", "import": "./src/path.ts" },
     "./shell": { "types": "./src/shell.ts", "import": "./src/shell.ts" },
     "./fieldInput": { "types": "./src/fieldInput.ts", "import": "./src/fieldInput.ts" },
-    "./terminalLabels": { "types": "./src/terminalLabels.ts", "import": "./src/terminalLabels.ts" }
+    "./terminalLabels": { "types": "./src/terminalLabels.ts", "import": "./src/terminalLabels.ts" },
+    "./qrCode": { "types": "./src/qrCode.ts", "import": "./src/qrCode.ts" },
+    "./qrTerminal": { "types": "./src/qrTerminal.ts", "import": "./src/qrTerminal.ts" }
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

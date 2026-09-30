@@ -361,7 +361,7 @@ export function FilesScreen({ client }: { client: RpcClient | null }) {
               <View style={styles.rowBody}>
                 <Text style={styles.rowLabel} numberOfLines={1}>
                   {e.name}
-                  {e.isSymlink ? " 🔗" : ""}
+                  {e.isSymlink ? <Text style={styles.symlinkTag}> · link</Text> : null}
                 </Text>
                 <Text style={styles.rowMeta} numberOfLines={1}>
                   {e.isDirectory ? "Folder" : `${kindLabel(fileKindFromName(e.name), false)} · ${formatBytes(e.size)}`} · {formatDateTime(e.mtimeMs)}
@@ -1132,6 +1132,7 @@ const styles = StyleSheet.create({
   iconWrap: { marginRight: 12, justifyContent: "center", width: 22, alignItems: "center" },
   rowBody: { flex: 1 },
   rowLabel: { color: theme.colors.foreground, fontSize: 15, fontFamily: theme.font.regular },
+  symlinkTag: { color: theme.colors.muted, fontSize: 13, fontFamily: theme.font.regular },
   rowMeta: { color: theme.colors.muted, fontSize: 12, fontFamily: theme.font.regular, marginTop: 2 },
   size: { color: theme.colors.secondary, fontSize: 13, fontFamily: theme.font.regular, marginLeft: 8 },
   loadMoreRow: { paddingVertical: 14, alignItems: "center" },

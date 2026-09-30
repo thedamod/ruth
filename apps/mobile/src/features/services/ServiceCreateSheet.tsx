@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-nati
 import { theme } from "../../theme";
 import type { RpcClient } from "../../lib/client";
 import { EnvEditor, Segmented, Sheet, TextField, ToggleRow, WizardNav, slugify } from "../../components/Form";
-
+import { IconPicker } from "../../components/IconPicker";
 type Kind = "systemd" | "docker" | "custom";
 type Health = "auto" | "process" | "port" | "http";
 
@@ -50,6 +50,7 @@ export function ServiceCreateSheet({
   const [pickedContainer, setPickedContainer] = useState<ContainerRow | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [icon, setIcon] = useState<string | null>(null);
   const [command, setCommand] = useState("");
   const [cwd, setCwd] = useState("");
   const [env, setEnv] = useState<Record<string, string>>({});
@@ -79,6 +80,7 @@ export function ServiceCreateSheet({
     setPickedContainer(null);
     setName("");
     setDescription("");
+    setIcon(null);
     setCommand("");
     setCwd("");
     setEnv({});
@@ -159,6 +161,7 @@ export function ServiceCreateSheet({
         id: slugify(name, `svc_${Date.now().toString(36)}`),
         name: name.trim(),
         description: description.trim() || undefined,
+        icon: icon || undefined,
         env: Object.keys(env).length > 0 ? env : undefined,
         port: portNum,
         autoRestart,
@@ -248,7 +251,12 @@ export function ServiceCreateSheet({
       ) : null}
       {current === "Basic" ? (
         <>
-          <TextField label="Name" value={name} onChange={setName} placeholder="Jellyfin" autoCapitalize="words" />
+          <View style={styles.nameRow}>
+            <IconPicker compact value={icon} onChange={setIcon} />
+            <View style={styles.nameField}>
+              <TextField label="Name" value={name} onChange={setName} placeholder="Jellyfin" autoCapitalize="words" />
+            </View>
+          </View>
           <TextField label="Description" value={description} onChange={setDescription} placeholder="Media server (optional)" autoCapitalize="sentences" />
           {kind === "custom" ? (
             <TextField label="Command" value={command} onChange={setCommand} placeholder="python3 -m http.server 8000" hint="Runs in a shell on the server." multiline />
@@ -347,6 +355,8 @@ function PickRow({
 
 const styles = StyleSheet.create({
   label: { color: theme.colors.secondary, fontSize: 13, fontFamily: theme.font.medium, marginBottom: 6 },
+  nameRow: { flexDirection: "row", alignItems: "flex-end", gap: 10 },
+  nameField: { flex: 1 },
   row: {
     flexDirection: "row",
     alignItems: "center",

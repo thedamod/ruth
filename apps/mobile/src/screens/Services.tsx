@@ -4,6 +4,7 @@ import { Plus } from "lucide-react-native";
 import { theme } from "../theme";
 import type { RpcClient } from "../lib/client";
 import { Card } from "../components/Card";
+import { ItemIcon } from "../components/IconPicker";
 import { ServiceCreateSheet } from "../features/services/ServiceCreateSheet";
 import { Placeholder } from "./Files";
 
@@ -13,6 +14,7 @@ interface Service {
   status?: string;
   state?: string;
   port?: number;
+  icon?: string | null;
 }
 
 /** Supervised daemons (e.g. Jellyfin) over `services.*` RPC. */
@@ -83,7 +85,13 @@ export function ServicesScreen({ client }: { client: RpcClient | null }) {
           return (
             <Card key={s.id}>
               <View style={styles.row}>
-                <View style={[styles.dot, { backgroundColor: running ? theme.colors.dotOnline : theme.colors.muted }]} />
+                {s.icon ? (
+                  <View style={styles.iconWrap}>
+                    <ItemIcon name={s.icon} size={16} />
+                  </View>
+                ) : (
+                  <View style={[styles.dot, { backgroundColor: running ? theme.colors.dotOnline : theme.colors.muted }]} />
+                )}
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{s.name ?? s.id}</Text>
                   <Text style={styles.sub}>
@@ -122,6 +130,7 @@ const styles = StyleSheet.create({
   add: { backgroundColor: theme.colors.cardAlt, borderRadius: 999, padding: 9 },
   row: { flexDirection: "row", alignItems: "center", gap: 10 },
   dot: { width: 10, height: 10, borderRadius: 5 },
+  iconWrap: { width: 30, height: 30, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.cardAlt },
   name: { color: theme.colors.foreground, fontSize: 16, fontFamily: theme.font.bold },
   sub: { color: theme.colors.secondary, fontSize: 13, fontFamily: theme.font.regular, marginTop: 2 },
   btn: { backgroundColor: theme.colors.cardAlt, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },

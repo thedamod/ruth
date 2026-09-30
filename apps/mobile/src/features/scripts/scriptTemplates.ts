@@ -1,12 +1,15 @@
 /**
- * One-tap starting points for the script creation flow.
+ * Quiet starting points for the script creation flow.
  * They only pre-fill the form — the user still reviews every step.
+ * Icons are Lucide names (see components/IconPicker), never emoji.
  */
 import type { ScriptParam } from "./params";
 
 export interface ScriptTemplate {
   id: string;
   name: string;
+  /** Lucide icon name, e.g. "HardDrive" */
+  icon?: string | null;
   description: string;
   command: string;
   cwd?: string;
@@ -20,6 +23,7 @@ export const SCRIPT_TEMPLATES: ScriptTemplate[] = [
   {
     id: "backup",
     name: "Backup",
+    icon: "HardDrive",
     description: "Archive an important folder (daily).",
     command: 'tar -czf "$HOME/backups/backup-$(date +%F).tar.gz" "$HOME/documents"',
     cwd: "$HOME",
@@ -30,6 +34,7 @@ export const SCRIPT_TEMPLATES: ScriptTemplate[] = [
   {
     id: "docker-updates",
     name: "Docker updates",
+    icon: "Container",
     description: "Pull fresh images and restart updated containers.",
     command: "docker images --format '{{.Repository}}:{{.Tag}}' | grep -v '<none>' | xargs -r -n1 docker pull",
     runMode: "both",
@@ -39,6 +44,7 @@ export const SCRIPT_TEMPLATES: ScriptTemplate[] = [
   {
     id: "cleanup",
     name: "Cleanup",
+    icon: "Trash2",
     description: "Clear caches, temp files and old logs.",
     command:
       "journalctl --vacuum-time=7d 2>/dev/null; docker system prune -f 2>/dev/null; rm -rf ~/.cache/* /tmp/* 2>/dev/null; df -h /",
@@ -49,6 +55,7 @@ export const SCRIPT_TEMPLATES: ScriptTemplate[] = [
   {
     id: "restart-service",
     name: "Restart a service",
+    icon: "RefreshCw",
     description: "Restart a systemd service by name.",
     command: "sudo systemctl restart {{service}}",
     runMode: "manual",
@@ -59,6 +66,7 @@ export const SCRIPT_TEMPLATES: ScriptTemplate[] = [
   {
     id: "room-lighting",
     name: "Room Lighting",
+    icon: "Lightbulb",
     description: "Brightness, color and power for a smart light.",
     command: "curl -s 'http://nodemcu/cm?power={{power}}&brightness={{brightness}}&color={{color}}'",
     runMode: "both",

@@ -65,7 +65,7 @@ export const ScriptDefinition = z.object({
   id: z.string().min(1).max(64).regex(/^[a-z0-9_-]+$/),
   name: z.string().min(1).max(128),
   description: z.string().max(1024).optional().default(""),
-  /** deprecated — kept for wire compat, no longer shown in the UI */
+  /** Lucide icon name (e.g. "Database") — subtle glyph in lists, never emoji */
   icon: z.string().max(64).optional(),
   command: z.string().min(1).max(4096), // shell command
   cwd: z.string().max(512).optional(),

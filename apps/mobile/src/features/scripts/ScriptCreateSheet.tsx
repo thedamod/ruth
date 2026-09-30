@@ -1,9 +1,11 @@
 import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Plus } from "lucide-react-native";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Check, ChevronDown, Plus } from "lucide-react-native";
 import { theme } from "../../theme";
 import type { RpcClient } from "../../lib/client";
+import { useBackPress } from "../../lib/backPress";
 import { EnvEditor, Segmented, Sheet, TextField, ToggleRow, WizardNav, slugify } from "../../components/Form";
+import { IconPicker, ItemIcon } from "../../components/IconPicker";
 import { SCRIPT_TEMPLATES } from "./scriptTemplates";
 import type { ParamValues, ScriptParam } from "./params";
 import { defaultParamValues, referencedParamKeys } from "./params";
@@ -36,8 +38,10 @@ export function ScriptCreateSheet({
 }) {
   const [step, setStep] = useState(0);
   const [templateId, setTemplateId] = useState<string | null>(null);
+  const [templateOpen, setTemplateOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [icon, setIcon] = useState<string | null>(null);
   const [command, setCommand] = useState("");
   const [cwd, setCwd] = useState("");
   const [runUser, setRunUser] = useState("");
@@ -52,12 +56,20 @@ export function ScriptCreateSheet({
   const [timeoutMin, setTimeoutMin] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useBackPress(templateOpen, () => {
+    setTemplateOpen(false);
+    return true;
+  });
+
+  const selectedTemplate = SCRIPT_TEMPLATES.find((x) => x.id === templateId) ?? null;
 
   function reset() {
     setStep(0);
     setTemplateId(null);
+    setTemplateOpen(false);
     setName("");
     setDescription("");
+    setIcon(null);
     setCommand("");
     setCwd("");
     setRunUser("");
@@ -76,10 +88,12 @@ export function ScriptCreateSheet({
 
   function applyTemplate(id: string | null) {
     setTemplateId(id);
+    setTemplateOpen(false);
     const t = SCRIPT_TEMPLATES.find((x) => x.id === id);
     if (!t) return;
     setName(t.name);
     setDescription(t.description);
+    setIcon(t.icon ?? null);
     setCommand(t.command);
     setCwd(t.cwd ?? "");
     setMode(t.runMode);
@@ -120,6 +134,7 @@ export function ScriptCreateSheet({
         id: slugify(name, `scr_${Date.now().toString(36)}`),
         name: name.trim(),
         description: description.trim() || undefined,
+        icon: icon || undefined,
         command: command.trim(),
         cwd: cwd.trim() || undefined,
         env: envClean,
@@ -145,19 +160,52 @@ export function ScriptCreateSheet({
       {step === 0 ? (
         <>
           <View>
-            <Text style={styles.label}>Start from a template</Text>
-            <View style={styles.chips}>
-              <Pressable onPress={() => applyTemplate(null)} style={[styles.chip, templateId === null && styles.chipActive]}>
-                <Text style={styles.chipLabel}>Blank</Text>
-              </Pressable>
-              {SCRIPT_TEMPLATES.map((t) => (
-                <Pressable key={t.id} onPress={() => applyTemplate(t.id)} style={[styles.chip, templateId === t.id && styles.chipActive]}>
-                  <Text style={styles.chipLabel}>{t.name}</Text>
+            <Text style={styles.label}>Template</Text>
+            <Pressable onPress={() => setTemplateOpen(true)} style={styles.dropdown} accessibilityLabel="Choose a template">
+              <View style={styles.dropdownText}>
+                {selectedTemplate ? <ItemIcon name={selectedTemplate.icon} size={15} /> : null}
+                <Text style={styles.dropdownValue} numberOfLines={1}>
+                  {selectedTemplate ? selectedTemplate.name : "Blank"}
+                </Text>
+              </View>
+              <ChevronDown size={16} color={theme.colors.muted} />
+            </Pressable>
+            {selectedTemplate ? <Text style={styles.dropdownHint}>{selectedTemplate.description}</Text> : null}
+          </View>
+          <Modal visible={templateOpen} animationType="slide" transparent onRequestClose={() => setTemplateOpen(false)}>
+            <View style={styles.modalOverlay}>
+              <Pressable style={{ flex: 1 }} onPress={() => setTemplateOpen(false)} />
+              <View style={styles.modalCard}>
+                <Text style={styles.modalTitle}>Start from a template</Text>
+                <Pressable onPress={() => applyTemplate(null)} style={[styles.templateRow, templateId === null && styles.templateRowActive]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.templateName}>Blank</Text>
+                    <Text style={styles.templateDesc}>Start empty.</Text>
+                  </View>
+                  {templateId === null ? <Check size={16} color={theme.colors.foreground} /> : null}
                 </Pressable>
-              ))}
+                {SCRIPT_TEMPLATES.map((t) => {
+                  const active = templateId === t.id;
+                  return (
+                    <Pressable key={t.id} onPress={() => applyTemplate(t.id)} style={[styles.templateRow, active && styles.templateRowActive]}>
+                      <ItemIcon name={t.icon} size={16} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.templateName}>{t.name}</Text>
+                        <Text style={styles.templateDesc}>{t.description}</Text>
+                      </View>
+                      {active ? <Check size={16} color={theme.colors.foreground} /> : null}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </Modal>
+          <View style={styles.nameRow}>
+            <IconPicker compact value={icon} onChange={setIcon} />
+            <View style={styles.nameField}>
+              <TextField label="Name" value={name} onChange={setName} placeholder="Nightly backup" autoCapitalize="words" />
             </View>
           </View>
-          <TextField label="Name" value={name} onChange={setName} placeholder="Nightly backup" autoCapitalize="words" />
           <TextField label="Description" value={description} onChange={setDescription} placeholder="What does it do?" autoCapitalize="sentences" />
         </>
       ) : null}
@@ -294,10 +342,39 @@ export function ScriptCreateSheet({
 
 const styles = StyleSheet.create({
   label: { color: theme.colors.secondary, fontSize: 13, fontFamily: theme.font.medium, marginBottom: 6 },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { backgroundColor: theme.colors.cardAlt, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.colors.border },
-  chipActive: { borderColor: theme.colors.cpu },
-  chipLabel: { color: theme.colors.foreground, fontSize: 13, fontFamily: theme.font.medium },
+  dropdown: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: theme.colors.cardAlt,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  dropdownText: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 },
+  dropdownValue: { flex: 1, color: theme.colors.foreground, fontSize: 15, fontFamily: theme.font.regular },
+  dropdownHint: { color: theme.colors.muted, fontSize: 12, fontFamily: theme.font.regular, marginTop: 4 },
+  nameRow: { flexDirection: "row", alignItems: "flex-end", gap: 10 },
+  nameField: { flex: 1 },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
+  modalCard: { backgroundColor: theme.colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, paddingBottom: 28, gap: 8, maxHeight: "72%" },
+  modalTitle: { color: theme.colors.foreground, fontSize: 16, fontFamily: theme.font.bold, marginBottom: 4 },
+  templateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: theme.colors.cardAlt,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  templateRowActive: { borderColor: theme.colors.cpu },
+  templateName: { color: theme.colors.foreground, fontSize: 14, fontFamily: theme.font.medium },
+  templateDesc: { color: theme.colors.muted, fontSize: 12, fontFamily: theme.font.regular, marginTop: 1 },
   error: { color: theme.colors.danger, fontFamily: theme.font.regular, fontSize: 13 },
   warn: { color: theme.colors.link, fontFamily: theme.font.regular, fontSize: 13 },
   muted: { color: theme.colors.muted, fontFamily: theme.font.regular, fontSize: 13 },

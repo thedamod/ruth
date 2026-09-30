@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "../theme";
 import { checkHealth, newServerId, parseServerUrl, redeemPairingUrl, type ServerEntry } from "../lib/client";
 import { ConnectionStatusDot, type ConnectionStatusDotState } from "../features/connection/ConnectionStatusDot";
+import { PairingQrScanSection } from "../features/connection/PairingQrScanSection";
 
 // ── presentation helpers (mirrors @t3tools/client-runtime/connection) ─────────
 function connectionStatusText(args: { phase: ConnectionStatusDotState; error: string | null }): string {
@@ -323,6 +324,12 @@ export function EnvironmentsScreen({
 
         {mode === "pairing" ? (
           <>
+            <PairingQrScanSection
+              onScanned={(data) => {
+                setPairingUrl(data);
+                setLocalError(null);
+              }}
+            />
             <View style={styles.fieldGap}>
               <Text style={styles.fieldLabel}>Label</Text>
               <TextInput

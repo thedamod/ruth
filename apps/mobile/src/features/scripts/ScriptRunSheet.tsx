@@ -60,6 +60,22 @@ export function ScriptRunSheet({
   const [widgetSaved, setWidgetSaved] = useState(false);
   const runIdRef = useRef<string | null>(null);
   const logScrollRef = useRef<ScrollView | null>(null);
+  // Tail-follow state: auto-scroll only while the user is pinned to the
+  // bottom. As soon as they scroll up to inspect output (e.g. a long
+  // `ports in use` table), we stop yanking them back down.
+  const logPinnedRef = useRef(true);
+  const [logPinned, setLogPinned] = useState(true);
+
+  function scrollLogToEnd(animated = false) {
+    logScrollRef.current?.scrollToEnd({ animated });
+  }
+
+  function handleLogScroll(e: { nativeEvent: { contentOffset: { y: number }; contentSize: { height: number }; layoutMeasurement: { height: number } } }) {
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    const pinned = contentOffset.y + layoutMeasurement.height >= contentSize.height - 32;
+    logPinnedRef.current = pinned;
+    setLogPinned((prev) => (prev === pinned ? prev : pinned));
+  }
 
   const params = script?.params ?? [];
 
@@ -69,6 +85,8 @@ export function ScriptRunSheet({
     setErrors({});
     setPhase("idle");
     setOutput("");
+    setLogPinned(true);
+    logPinnedRef.current = true;
     setStartedAt(null);
     setFinishedAt(null);
     setRunError(null);
@@ -128,6 +146,8 @@ export function ScriptRunSheet({
     if (Object.keys(errs).length > 0) return;
     setPhase("running");
     setOutput("");
+    setLogPinned(true);
+    logPinnedRef.current = true;
     setRunError(null);
     setStartedAt(new Date().toISOString());
     setFinishedAt(null);
@@ -180,6 +200,10 @@ export function ScriptRunSheet({
     try {
       const logs = (await client.call("scripts.logs", { runId })) as { content?: string };
       setOutput((logs?.content ?? "").slice(-6000));
+      // History inspection starts at the top — don't tail-follow here.
+      logPinnedRef.current = false;
+      setLogPinned(false);
+      requestAnimationFrame(() => logScrollRef.current?.scrollTo({ y: 0, animated: false }));
     } catch (e) {
       setRunError(e instanceof Error ? e.message : String(e));
     }
@@ -235,21 +259,37 @@ export function ScriptRunSheet({
       </View>
       {output ? (
         <View>
-          <Text style={styles.section}>Output</Text>
+          <View style={styles.logHeader}>
+            <Text style={styles.section}>Output</Text>
+            {!logPinned ? (
+              <Pressable onPress={() => { logPinnedRef.current = true; setLogPinned(true); scrollLogToEnd(true); }} style={styles.tailBtn} hitSlop={8}>
+                <Text style={styles.tailLabel}>Jump to latest</Text>
+              </Pressable>
+            ) : null}
+          </View>
           {/* Inner scroll window: the outer Sheet already scrolls, so the log
-              gets its own capped viewport (nestedScrollEnabled for Android)
-              and tails new output while a run streams. */}
+              gets its own capped viewport (nestedScrollEnabled for Android).
+              It only tails new output while pinned to the bottom — scrolling
+              up freezes the position so long tables stay inspectable. */}
           <ScrollView
             ref={logScrollRef}
             style={styles.logBox}
+            contentContainerStyle={styles.logContent}
             nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+            scrollEventThrottle={16}
             showsVerticalScrollIndicator
-            onContentSizeChange={() => logScrollRef.current?.scrollToEnd({ animated: false })}
+            persistentScrollbar
+            onScroll={handleLogScroll}
+            onContentSizeChange={() => {
+              if (logPinnedRef.current) scrollLogToEnd(false);
+            }}
           >
             <Text selectable style={styles.logText}>
               {output}
             </Text>
           </ScrollView>
+          {!logPinned ? <Text style={styles.logHint}>Scrolled up — output won't auto-follow until you jump back.</Text> : null}
         </View>
       ) : null}
       <View>
@@ -285,14 +325,21 @@ const styles = StyleSheet.create({
   status: { color: theme.colors.foreground, fontSize: 14, fontFamily: theme.font.medium },
   error: { color: theme.colors.danger, fontFamily: theme.font.regular, fontSize: 13 },
   section: { color: theme.colors.secondary, fontSize: 13, fontFamily: theme.font.medium, marginBottom: 6 },
+  logHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 },
+  tailBtn: { backgroundColor: theme.colors.cardAlt, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.colors.border },
+  tailLabel: { color: theme.colors.foreground, fontSize: 12, fontFamily: theme.font.medium },
+  logHint: { color: theme.colors.tertiary, fontSize: 11, fontFamily: theme.font.regular, marginTop: 4 },
   logBox: {
     backgroundColor: theme.colors.cardAlt,
     borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.border,
     padding: 10,
-    minHeight: 120,
-    maxHeight: 320,
+    minHeight: 160,
+    maxHeight: 360,
   },
-  logText: { color: theme.colors.foreground, fontFamily: theme.font.regular, fontSize: 12 },
+  logContent: { paddingBottom: 8, flexGrow: 1 },
+  logText: { color: theme.colors.foreground, fontFamily: "monospace", fontSize: 12, lineHeight: 17 },
   histRow: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: theme.colors.cardAlt, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9 },
   histText: { color: theme.colors.secondary, fontSize: 12, fontFamily: theme.font.regular },
   widgetRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, marginTop: 6 },

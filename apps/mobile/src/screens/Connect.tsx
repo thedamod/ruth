@@ -10,6 +10,7 @@ import {
   type ServerEntry,
 } from "../lib/client";
 import { Card } from "../components/Card";
+import { PairingQrScanSection } from "../features/connection/PairingQrScanSection";
 
 /**
  * Server catalog + onboarding (t3code-style environment list).
@@ -131,6 +132,14 @@ export function ConnectScreen({
 
       {mode === "pairing" ? (
         <>
+          <View style={styles.scanWrap}>
+            <PairingQrScanSection
+              onScanned={(data) => {
+                setPairingUrl(data);
+                setLocalError(null);
+              }}
+            />
+          </View>
           <TextInput
             style={styles.input}
             placeholder="Label (optional, e.g. Aether-PC)"
@@ -225,6 +234,7 @@ const styles = StyleSheet.create({
   segActive: { backgroundColor: theme.colors.cardAlt },
   segLabel: { color: theme.colors.muted, fontFamily: theme.font.medium, fontSize: 14 },
   segLabelActive: { color: theme.colors.foreground },
+  scanWrap: { marginTop: 12 },
   input: {
     backgroundColor: theme.colors.card,
     borderColor: theme.colors.border,
